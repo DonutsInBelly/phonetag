@@ -15,7 +15,7 @@
         android:layout_marginTop="73dp" />
 
     <Button
-        android:layout_width="wrap_content"
+        android:layout_width="100pt"
         android:layout_height="wrap_content"
         android:text="TAKE PHOTO"
         android:id="@+id/cameraButton"
@@ -23,5 +23,15 @@
         android:layout_centerHorizontal="true"
         android:layout_marginTop="112dp"
         android:onClick="switchToCamera" />
+
+    <Button
+        android:layout_width="100pt"
+        android:layout_height="wrap_content"
+        android:text="I&apos;M IT!"
+        android:id="@+id/receiveButton"
+        android:layout_below="@+id/cameraButton"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="63dp"
+        android:onClick="switchToHint"/>
 
 </RelativeLayout>

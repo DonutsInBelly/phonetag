@@ -1,18 +1,22 @@
 package based.phonetag;
 
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
+import java.net.*;
+import java.nio.ByteBuffer;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
+import android.util.Base64;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.hardware.camera2.CameraDevice;
@@ -23,7 +27,7 @@ import android.widget.Toast;
 public class MainActivity extends ActionBarActivity {
     static final int REQUEST_TAKE_PHOTO = 1;
     private static final int CAPTURE_IMAGE_ACTIVITY_REQUEST_CODE = 100;
-    String mCurrentPhotoPath;
+    static String mCurrentPhotoPath;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -61,6 +65,7 @@ public class MainActivity extends ActionBarActivity {
                 //Image captured and saved to fileUri specified in the Intent
                 Toast.makeText(this, "Image saved to :\n" +
                         data.getData(), Toast.LENGTH_LONG).show();
+                sendToServer();
             } else if (resultCode == RESULT_CANCELED) {
                 //User cancelled the image capture
                 System.out.println("Image canceled.");
@@ -69,6 +74,50 @@ public class MainActivity extends ActionBarActivity {
                 Toast.makeText(this, "Image capture failed.", Toast.LENGTH_LONG).show();
             }
         }
+    }
+
+    private static void sendToServer() {
+        Socket socket = null;
+        OutputStream outputStream = null;
+        try {
+            socket = new Socket("104.131.109.87", 9001);
+            outputStream = socket.getOutputStream();
+            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+            /* BEGIN BYTE CONVERSION */
+            BitmapFactory.Options options = new BitmapFactory.Options();
+
+            options.inSampleSize = 4;
+            options.inPurgeable = true;
+            Bitmap bm = BitmapFactory.decodeFile(mCurrentPhotoPath, options);
+
+            /*
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+
+            bm.compress(Bitmap.CompressFormat.JPEG, 40, baos);
+            */
+            bm.compress(Bitmap.CompressFormat.JPEG, 40, byteArrayOutputStream);
+
+
+            // bitmap object
+            /*
+            byte[] byteImage_photo = baos.toByteArray();
+            */
+
+            /* END BYTE CONVERSION */
+
+            byte[] size = ByteBuffer.allocate(4).putInt(byteArrayOutputStream.size()).array();
+            outputStream.write(size);
+            outputStream.write(byteArrayOutputStream.toByteArray());
+            outputStream.flush();
+            System.out.println("Flushed: " + System.currentTimeMillis());
+
+            Thread.sleep(120000);
+            System.out.println("Closing: " + System.currentTimeMillis());
+            socket.close();
+        } catch (Exception e) {
+
+        }
+
     }
 
     private boolean checkCameraHardware(Context context) {
@@ -85,27 +134,41 @@ public class MainActivity extends ActionBarActivity {
         dispatchTakePictureIntent();
     }
 
-    private File createImageFile() throws IOException {
+    public void switchToHint(View v) {
+        return;
+    }
+
+
+    private File createImageFile() {
         String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
         String imageFileName = "JPEG_" + timeStamp + "_";
         File storageDir =
                 Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
-        File image = File.createTempFile(
-                imageFileName, /* prefix */
-                ".jpg", /* suffix */
-                storageDir /* directory */
-        );
+        File image = new File(imageFileName+".jpg");
 
         mCurrentPhotoPath = "file:" + image.getAbsolutePath();
         return image;
+
+
     }
 
+    private void dispatchTakePictureIntent() {
+        File file = createImageFile();
+        Uri outputFileUri = Uri.fromFile(file);
+
+        Intent intent = new Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE);
+        intent.putExtra(MediaStore.EXTRA_OUTPUT, outputFileUri);
+
+        startActivityForResult(intent, REQUEST_TAKE_PHOTO);
+    }
+    /*
     private void dispatchTakePictureIntent() {
         Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
         if (takePictureIntent.resolveActivity(getPackageManager())!=null) {
             startActivityForResult(takePictureIntent, REQUEST_TAKE_PHOTO);
         }
     }
+    */
     /*
     private void dispatchTakePictureIntent() {
         Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
